@@ -2,10 +2,11 @@ const Bootcamp = require("../models/Bootcamp");
 const ErrorResponse = require("../utils/error-response");
 const asyncHandler = require("express-async-handler");
 const { geocoder } = require("../utils/geocoder");
+const { getpagination } = require("../services/bootcamps");
 
 exports.getBootcamps = asyncHandler(async (req, res, next) => {
   const reqQuery = { ...req.query };
-  const removeFields = ["select", "sort"];
+  const removeFields = ["select", "sort", "page", "limit"];
   removeFields.forEach(param => delete reqQuery[param]);
   let queryStr = JSON.stringify(reqQuery);
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, math => `$${math}`);
@@ -21,8 +22,10 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
   } else {
     query.sort("-createdAt");
   }
+
+  const pagination = await getpagination(req, query);
   const bootcamps = await query;
-  res.status(200).json({ succes: true, data: bootcamps });
+  res.status(200).json({ succes: true, data: bootcamps, pagination });
 });
 
 exports.getBootcamp = asyncHandler(async (req, res, next) => {
