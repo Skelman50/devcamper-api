@@ -10,7 +10,7 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
   removeFields.forEach(param => delete reqQuery[param]);
   let queryStr = JSON.stringify(reqQuery);
   queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, math => `$${math}`);
-  let query = Bootcamp.find(JSON.parse(queryStr));
+  let query = Bootcamp.find(JSON.parse(queryStr)).populate("courses");
   if (req.query.select) {
     const fields = req.query.select.split(",").join(" ");
     query.select(fields);
@@ -25,7 +25,7 @@ exports.getBootcamps = asyncHandler(async (req, res, next) => {
 
   const pagination = await getpagination(req, query);
   const bootcamps = await query;
-  res.status(200).json({ succes: true, data: bootcamps, pagination });
+  res.status(200).json({ succes: true, pagination, data: bootcamps });
 });
 
 exports.getBootcamp = asyncHandler(async (req, res, next) => {
@@ -64,11 +64,12 @@ exports.deleteBootcamp = asyncHandler(async (req, res, next) => {
   const {
     params: { id }
   } = req;
-  const bootcamp = await Bootcamp.findByIdAndDelete(id);
+  const bootcamp = await Bootcamp.findById(id);
   if (!bootcamp) {
     return next(new ErrorResponse("Bootcamp not found", 404));
   }
-  res.status(200).json({ succes: true, data: bootcamp });
+  bootcamp.remove();
+  res.status(200).json({ succes: true });
 });
 
 exports.getBootcampsInradius = asyncHandler(async (req, res, next) => {
