@@ -5,21 +5,17 @@ const asyncHandler = require("express-async-handler");
 
 //public
 exports.getCourses = asyncHandler(async (req, res, next) => {
-  let query;
   if (req.params.bootcampId) {
-    query = Course.find({ bootcamp: req.params.bootcampId }).populate({
+    const courses = await Course.find({
+      bootcamp: req.params.bootcampId
+    }).populate({
       path: "bootcamp",
       select: "name description"
     });
-  } else {
-    query = Course.find().populate({
-      path: "bootcamp",
-      select: "name description"
-    });
+    return res.json({ success: true, count: courses.length, data: courses });
   }
 
-  const courses = await query;
-  res.json({ success: true, count: courses.length, data: courses });
+  res.json(res.advancedResult);
 });
 
 //public

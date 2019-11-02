@@ -1,38 +1,18 @@
+const path = require("path");
 const Bootcamp = require("../models/Bootcamp");
 const ErrorResponse = require("../utils/error-response");
 const asyncHandler = require("express-async-handler");
 const { geocoder } = require("../utils/geocoder");
-const { getpagination } = require("../services/bootcamps");
 
 exports.getBootcamps = asyncHandler(async (req, res, next) => {
-  const reqQuery = { ...req.query };
-  const removeFields = ["select", "sort", "page", "limit"];
-  removeFields.forEach(param => delete reqQuery[param]);
-  let queryStr = JSON.stringify(reqQuery);
-  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, math => `$${math}`);
-  let query = Bootcamp.find(JSON.parse(queryStr)).populate("courses");
-  if (req.query.select) {
-    const fields = req.query.select.split(",").join(" ");
-    query.select(fields);
-  }
-
-  if (req.query.sort) {
-    const sortBy = req.query.sort.split(",").join(" ");
-    query.sort(sortBy);
-  } else {
-    query.sort("-createdAt");
-  }
-
-  const pagination = await getpagination(req, query);
-  const bootcamps = await query;
-  res.status(200).json({ succes: true, pagination, data: bootcamps });
+  res.status(200).json(res.advancedResult);
 });
 
 exports.getBootcamp = asyncHandler(async (req, res, next) => {
   const {
     params: { id }
   } = req;
-  const bootcamp = await Bootcamp.findById(id);
+  const bootcamp = await Bootcamp.findById(id).populate("courses");
   if (!bootcamp) {
     return next(new ErrorResponse("Bootcamp not found", 404));
   }
@@ -85,4 +65,42 @@ exports.getBootcampsInradius = asyncHandler(async (req, res, next) => {
   });
 
   res.json({ succes: true, data: bootcamps });
+});
+
+//photo upload
+//put api/v1/bootcamps/:id/photo
+
+exports.bootcampPhotoUpload = asyncHandler(async (req, res, next) => {
+  const bootcamp = await Bootcamp.findById(req.params.id);
+  if (!bootcamp) {
+    return next(new ErrorResponse("Bootcamp not found", 404));
+  }
+  if (!req.files) {
+    return next(new ErrorResponse("Please upload a photo", 400));
+  }
+  const { file } = req.files;
+
+  if (!file.mimetype.startsWith("image")) {
+    return next(new ErrorResponse("Please upload a photo", 400));
+  }
+  //check file size
+  if (file.size > process.env.MAX_FILE_UPLOADS) {
+    return next(
+      new ErrorResponse(
+        `please upload a image less then ${process.env.MAX_FILE_UPLOADS}`,
+        400
+      )
+    );
+  }
+
+  //create custom filename
+  file.name = `photo_${bootcamp._id}${path.parse(file.name).ext}`;
+  file.mv(`${process.env.FILE_UPLOAD_PATH}/${file.name}`, async err => {
+    if (err) {
+      console.log(err);
+      return next(new ErrorResponse("Problem with file upload", 500));
+    }
+    await Bootcamp.updateOne({ _id: bootcamp._id }, { photo: file.name });
+    res.json({ success: true, data: file.name });
+  });
 });
