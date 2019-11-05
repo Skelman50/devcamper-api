@@ -5,7 +5,7 @@ exports.errorHandler = (err, req, res, next) => {
   error.message = err.message;
   console.log(err);
   if (err.name === "CastError") {
-    error = new Errorresponse("Bootcamp not found", 404);
+    error = new Errorresponse("Resource not found", 404);
   }
 
   if (err.code === 11000) {
