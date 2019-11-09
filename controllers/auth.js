@@ -65,6 +65,17 @@ exports.getMe = asyncHandler(async (req, res, next) => {
   res.json({ success: true, data: user });
 });
 
+//api/v1/auth/logout
+//Private
+//GET
+exports.logout = asyncHandler(async (req, res, next) => {
+  res.cookie("token", "none", {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true
+  });
+  res.json({ success: true });
+});
+
 //api/v1/auth/updatedetails
 //Private
 //PUT
